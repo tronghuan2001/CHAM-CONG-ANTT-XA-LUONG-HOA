@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chấm công BVANTTCS – Xã Lương Hoà</title>
+  <!-- Font Be Vietnam Pro (local) để tránh lỗi font -->
+  <link rel="stylesheet" href="./fonts.css" />
+  <link rel="stylesheet" href="./styles.css" />
+  <!-- Thư viện xuất PDF (tuỳ chọn; nếu không tải được sẽ dùng “In/Lưu PDF” của trình duyệt) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="title" id="appTitle">
+        CÔNG AN XÃ LƯƠNG HOÀ
+        <small>BVANTTCS XÃ LƯƠNG HOÀ</small>
+      </div>
+      <div class="badge" title="Thời gian theo GMT+7 (Việt Nam)">
+        <span>Giờ Việt Nam:</span>
+        <b id="vnClock">--:--:--</b>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Đăng nhập -->
+    <section id="viewLogin" class="card">
+      <div class="card-header">
+        <h2>Đăng nhập</h2>
+        <div class="muted" id="loginHint"></div>
+      </div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h2>Thông tin tài khoản</h2>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label for="loginUsername">Tên đăng nhập</label>
+                <input id="loginUsername" autocomplete="username" placeholder="vd: tainv@anttlh" />
+              </div>
+              <div class="field">
+                <label for="loginPassword">Mật khẩu</label>
+                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                <div class="help">
+                  Lưu ý: mật khẩu mặc định khi Dev tạo tài khoản là <b>123456</b>. Quy tắc mật khẩu 8–10 ký tự chỉ áp dụng khi đổi mật khẩu.
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-primary" id="btnLogin">Đăng nhập</button>
+                <button class="btn" id="btnLoginClearSaved" title="Xoá thông tin đã lưu trên trình duyệt này">Xoá lưu đăng nhập</button>
+              </div>
+              <div class="help" style="margin-top:10px">
+                Trang web này lưu dữ liệu <b>trên máy đang sử dụng</b> (Local Storage/IndexedDB). Nếu bạn mở bằng máy khác thì dữ liệu sẽ khác.
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Hỗ trợ nhanh</h2>
+            </div>
+            <div class="card-body">
+              <div class="notice">
+                <b>Lần đầu sử dụng:</b> hệ thống tự tạo tài khoản Dev mẫu <b>dev@anttlh</b> (mật khẩu <b>Dev@1234!</b>). Dev nên đổi mật khẩu ngay sau khi đăng nhập.
+              </div>
+              <div class="divider"></div>
+              <div class="help">
+                Nếu bạn muốn <b>đồng bộ lên Google Sheets</b>: đăng nhập Dev → “Cài đặt” → dán đường link Web App của Google Apps Script (hướng dẫn có sẵn trong thư mục dự án).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thanh điều khiển chung sau khi đăng nhập -->
+    <section id="viewShell" class="card hidden" style="margin-top:14px">
+      <div class="card-header">
+        <h2>
+          Xin chào, <span id="meName">...</span>
+          <span class="pill" style="margin-left:8px"><b>Vai trò:</b> <span id="meRole">...</span></span>
+        </h2>
+        <div class="row">
+          <button class="btn btn-small" id="btnChangePassword">Đổi mật khẩu</button>
+          <button class="btn btn-small btn-danger" id="btnLogout">Đăng xuất</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="tabs" id="tabs"></div>
+        <div class="divider"></div>
+        <div id="tabContent"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal hỏi lưu tài khoản -->
+  <div class="modal-backdrop" id="rememberModal">
+    <div class="modal">
+      <header>Lưu tài khoản, mật khẩu?</header>
+      <div class="content">
+        <div class="notice">
+          Bạn có muốn lưu tài khoản và mật khẩu trên <b>trình duyệt của thiết bị này</b> để lần sau đăng nhập nhanh hơn không?
+          <div class="help" style="margin-top:8px">
+            Khuyến nghị: chỉ chọn “Lưu” khi dùng trên máy/điện thoại cá nhân.
+          </div>
+        </div>
+      </div>
+      <footer>
+        <button class="btn" id="btnRememberNo">Không lưu</button>
+        <button class="btn btn-success" id="btnRememberYes">Lưu</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal đổi mật khẩu -->
+  <div class="modal-backdrop" id="passwordModal">
+    <div class="modal">
+      <header>Đổi mật khẩu</header>
+      <div class="content">
+        <div class="field">
+          <label for="oldPass">Mật khẩu hiện tại</label>
+          <input id="oldPass" type="password" autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label for="newPass">Mật khẩu mới</label>
+          <input id="newPass" type="password" autocomplete="new-password" placeholder="8–10 ký tự, có số, chữ hoa, ký tự đặc biệt" />
+          <div class="help">
+            Quy tắc: 8–10 ký tự, gồm chữ số, ít nhất 1 chữ hoa và 1 ký tự đặc biệt (vd: <code>@</code>, <code>!</code>, <code>#</code>…).
+          </div>
+        </div>
+        <div class="field">
+          <label for="newPass2">Nhập lại mật khẩu mới</label>
+          <input id="newPass2" type="password" autocomplete="new-password" />
+        </div>
+        <div class="help" id="passMsg"></div>
+      </div>
+      <footer>
+        <button class="btn" id="btnPassCancel">Huỷ</button>
+        <button class="btn btn-primary" id="btnPassSave">Lưu mật khẩu</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal thông báo -->
+  <div class="modal-backdrop" id="alertModal">
+    <div class="modal">
+      <header id="alertTitle">Thông báo</header>
+      <div class="content" id="alertContent"></div>
+      <footer>
+        <button class="btn btn-primary" id="btnAlertOk">Đã hiểu</button>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
